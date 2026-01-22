@@ -7,11 +7,12 @@ import { WorldMap } from '@/components/map/WorldMap';
 import { Globe3D } from '@/components/globe/Globe3D';
 import { NewsFeed } from '@/components/news/NewsFeed';
 import { VideoFeed } from '@/components/video/VideoFeed';
+import { SpaceExplorer } from '@/components/space/SpaceExplorer';
 import { RiskScore, NewsResponse } from '@/types';
 import { Hotspot } from '@/data/hotspots';
 import { CountryInfo } from '@/data/countries';
 
-type MapView = '2d' | '3d';
+type MapView = '2d' | '3d' | 'space';
 type SidePanel = 'news' | 'video';
 
 async function fetchRisks(): Promise<{ risks: Record<string, RiskScore> }> {
@@ -92,6 +93,16 @@ export default function Dashboard() {
             >
               🌐 3D Globe
             </button>
+            <button
+              onClick={() => setMapView('space')}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                mapView === 'space'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-background text-text-muted hover:text-foreground border border-border'
+              }`}
+            >
+              🔭 Deep Space
+            </button>
           </div>
 
           {/* Map/Globe Content */}
@@ -104,11 +115,13 @@ export default function Dashboard() {
                 onCountrySelect={setSelectedCountry}
                 onOpenInquiry={() => {}}
               />
-            ) : (
+            ) : mapView === '3d' ? (
               <Globe3D
                 onHotspotSelect={setSelectedHotspot}
                 autoRotate={true}
               />
+            ) : (
+              <SpaceExplorer onBackToEarth={() => setMapView('3d')} />
             )}
           </div>
         </div>
