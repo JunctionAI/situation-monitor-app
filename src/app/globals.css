@@ -1,0 +1,227 @@
+@import "tailwindcss";
+
+/* Dark Military/Ops Theme */
+:root {
+  /* Base colors */
+  --background: #0a0f14;
+  --surface: #111820;
+  --surface-light: #1a2332;
+  --border: #2a3544;
+
+  /* Text colors */
+  --foreground: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+
+  /* Risk tier colors */
+  --risk-low: #22c55e;
+  --risk-medium: #eab308;
+  --risk-high: #f97316;
+  --risk-critical: #ef4444;
+
+  /* Tactical accents */
+  --tactical-green: #22c55e;
+  --tactical-green-dim: #16a34a;
+  --tactical-blue: #3b82f6;
+
+  /* Fonts */
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-light: var(--surface-light);
+  --color-border: var(--border);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  --color-risk-low: var(--risk-low);
+  --color-risk-medium: var(--risk-medium);
+  --color-risk-high: var(--risk-high);
+  --color-risk-critical: var(--risk-critical);
+
+  --color-tactical-green: var(--tactical-green);
+  --color-tactical-green-dim: var(--tactical-green-dim);
+  --color-tactical-blue: var(--tactical-blue);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Tactical scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Map styles */
+.map-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* Scan line animation for tactical feel */
+@keyframes scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.scan-line {
+  animation: scan 3s linear infinite;
+  background: linear-gradient(
+    transparent,
+    rgba(34, 197, 94, 0.1),
+    transparent
+  );
+}
+
+/* Pulse animation for alerts */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse-critical {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* News card hover effect */
+.news-card {
+  transition: all 0.2s ease;
+}
+
+.news-card:hover {
+  background: var(--surface-light);
+  border-color: var(--tactical-green-dim);
+}
+
+/* Risk badge styles */
+.risk-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.risk-badge-low {
+  background: rgba(34, 197, 94, 0.2);
+  color: var(--risk-low);
+  border: 1px solid var(--risk-low);
+}
+
+.risk-badge-medium {
+  background: rgba(234, 179, 8, 0.2);
+  color: var(--risk-medium);
+  border: 1px solid var(--risk-medium);
+}
+
+.risk-badge-high {
+  background: rgba(249, 115, 22, 0.2);
+  color: var(--risk-high);
+  border: 1px solid var(--risk-high);
+}
+
+.risk-badge-critical {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--risk-critical);
+  border: 1px solid var(--risk-critical);
+}
+
+/* Hotspot marker animations */
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes marker-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+.animate-ping {
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.animate-pulse {
+  animation: marker-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* SVG marker styles */
+svg circle {
+  transition: all 0.2s ease;
+}
+
+/* Hotspot label styles */
+svg text {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Backdrop blur fallback */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* New article highlight animation */
+@keyframes highlight-new {
+  0% {
+    background-color: rgba(34, 197, 94, 0.15);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.animate-highlight-new {
+  animation: highlight-new 3s ease-out forwards;
+}
