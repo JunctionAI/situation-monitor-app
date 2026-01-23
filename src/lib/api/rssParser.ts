@@ -29,18 +29,35 @@ export async function fetchFromRSS(source: RSSSource): Promise<NewsArticle[]> {
     const xml = await response.text();
     const items = parseRSSXML(xml);
 
-    return items.slice(0, 15).map((item, index) => ({
-      id: `rss-${source.id}-${Date.now()}-${index}`,
-      title: item.title,
-      description: item.description || null,
-      source: source.name,
-      sourceId: source.id,
-      author: item.creator || item.author || null,
-      url: item.link,
-      imageUrl: null,
-      publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
-      category: categorizeArticle(item.title, item.description || ''),
-    }));
+    return items.slice(0, 15).map((item, index) => {
+      // Parse the date properly, keeping the original if valid
+      let publishedAt: string;
+      if (item.pubDate) {
+        try {
+          const parsed = new Date(item.pubDate);
+          publishedAt = !isNaN(parsed.getTime()) ? parsed.toISOString() : item.pubDate;
+        } catch {
+          publishedAt = item.pubDate;
+        }
+      } else {
+        // No date found - use current time minus a random offset to avoid all showing "1 minute ago"
+        const randomOffset = Math.floor(Math.random() * 3600000); // up to 1 hour
+        publishedAt = new Date(Date.now() - randomOffset).toISOString();
+      }
+
+      return {
+        id: `rss-${source.id}-${Date.now()}-${index}`,
+        title: item.title,
+        description: item.description || null,
+        source: source.name,
+        sourceId: source.id,
+        author: item.creator || item.author || null,
+        url: item.link,
+        imageUrl: null,
+        publishedAt,
+        category: categorizeArticle(item.title, item.description || ''),
+      };
+    });
   } catch (error) {
     console.error(`RSS fetch error for ${source.name}:`, error);
     return [];
@@ -90,26 +107,33 @@ export async function fetchFromAllRSS(options?: {
 function parseRSSXML(xml: string): RSSItem[] {
   const items: RSSItem[] = [];
 
-  // Match all <item> blocks
-  const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
+  // Match all <item> blocks (RSS) or <entry> blocks (Atom)
+  const itemRegex = /<(?:item|entry)[^>]*>([\s\S]*?)<\/(?:item|entry)>/gi;
   let match;
 
   while ((match = itemRegex.exec(xml)) !== null) {
     const itemXml = match[1];
 
     const title = extractTag(itemXml, 'title');
-    const link = extractTag(itemXml, 'link');
-    const description = extractTag(itemXml, 'description');
-    const pubDate = extractTag(itemXml, 'pubDate');
+    const link = extractLink(itemXml);
+    const description = extractTag(itemXml, 'description') ||
+                        extractTag(itemXml, 'summary') ||
+                        extractTag(itemXml, 'content');
+    // Try multiple date formats
+    const pubDate = extractTag(itemXml, 'pubDate') ||
+                    extractTag(itemXml, 'published') ||
+                    extractTag(itemXml, 'updated') ||
+                    extractTag(itemXml, 'dc:date') ||
+                    extractTag(itemXml, 'date');
     const creator = extractTag(itemXml, 'dc:creator');
-    const author = extractTag(itemXml, 'author');
+    const author = extractTag(itemXml, 'author') || extractTag(itemXml, 'name');
 
     if (title && link) {
       items.push({
         title: decodeHTMLEntities(title),
         link: link.trim(),
         description: description ? cleanDescription(decodeHTMLEntities(description)) : undefined,
-        pubDate,
+        pubDate: pubDate ? normalizeDate(pubDate) : undefined,
         creator,
         author
       });
@@ -117,6 +141,46 @@ function parseRSSXML(xml: string): RSSItem[] {
   }
 
   return items;
+}
+
+// Extract link - handles both RSS <link> and Atom <link href="...">
+function extractLink(xml: string): string | undefined {
+  // Try Atom style first: <link href="..." />
+  const atomLinkMatch = xml.match(/<link[^>]*href=["']([^"']+)["'][^>]*>/i);
+  if (atomLinkMatch) return atomLinkMatch[1];
+
+  // Try RSS style: <link>url</link>
+  return extractTag(xml, 'link');
+}
+
+// Normalize various date formats to ISO string
+function normalizeDate(dateStr: string): string {
+  try {
+    // Try parsing as-is first
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+
+    // Handle some common non-standard formats
+    // e.g., "22 Jan 2026 14:30:00"
+    const parts = dateStr.match(/(\d{1,2})\s+(\w{3})\s+(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+    if (parts) {
+      const [, day, month, year, hour, min, sec] = parts;
+      const monthMap: Record<string, number> = {
+        jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+        jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+      };
+      const monthNum = monthMap[month.toLowerCase()];
+      if (monthNum !== undefined) {
+        return new Date(+year, monthNum, +day, +hour, +min, +sec).toISOString();
+      }
+    }
+
+    return dateStr; // Return original if can't parse
+  } catch {
+    return dateStr;
+  }
 }
 
 function extractTag(xml: string, tag: string): string | undefined {
