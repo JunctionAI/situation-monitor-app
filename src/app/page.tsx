@@ -8,13 +8,23 @@ import { Globe3D } from '@/components/globe/Globe3D';
 import { NewsFeed } from '@/components/news/NewsFeed';
 import { VideoFeed } from '@/components/video/VideoFeed';
 import { SpaceExplorer } from '@/components/space/SpaceExplorer';
+import { ZoneDetail } from '@/components/zone/ZoneDetail';
 import { RiskScore, NewsResponse } from '@/types';
 import { Hotspot } from '@/data/hotspots';
 import { CountryInfo } from '@/data/countries';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 
 type MapView = '2d' | '3d' | 'space';
 type SidePanel = 'news' | 'video';
 type MobileTab = 'map' | 'feed';
+
+function ProBadge() {
+  return (
+    <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-tactical-green to-emerald-600 text-background rounded">
+      PRO
+    </span>
+  );
+}
 
 async function fetchRisks(): Promise<{ risks: Record<string, RiskScore> }> {
   const response = await fetch('/api/risk');
@@ -35,6 +45,25 @@ export default function Dashboard() {
   const [sidePanel, setSidePanel] = useState<SidePanel>('news');
   const [mobileTab, setMobileTab] = useState<MobileTab>('map');
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+
+  const { canAccessDeepSpace, canAccessLiveVideo, openUpgradeModal } = useSubscription();
+
+  // Feature-gated handlers
+  const handleSpaceClick = () => {
+    if (canAccessDeepSpace) {
+      setMapView('space');
+    } else {
+      openUpgradeModal();
+    }
+  };
+
+  const handleVideoClick = () => {
+    if (canAccessLiveVideo) {
+      setSidePanel('video');
+    } else {
+      openUpgradeModal();
+    }
+  };
 
   const { data: riskData } = useQuery({
     queryKey: ['risks'],
@@ -115,7 +144,7 @@ export default function Dashboard() {
               🌐 3D Globe
             </button>
             <button
-              onClick={() => setMapView('space')}
+              onClick={handleSpaceClick}
               className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
                 mapView === 'space'
                   ? 'bg-purple-600 text-white'
@@ -123,6 +152,7 @@ export default function Dashboard() {
               }`}
             >
               🔭 Deep Space
+              {!canAccessDeepSpace && <ProBadge />}
             </button>
           </div>
 
@@ -147,7 +177,7 @@ export default function Dashboard() {
               📰 News Feed
             </button>
             <button
-              onClick={() => setSidePanel('video')}
+              onClick={handleVideoClick}
               className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
                 sidePanel === 'video'
                   ? 'bg-red-600 text-white'
@@ -155,12 +185,13 @@ export default function Dashboard() {
               }`}
             >
               📺 Live Video
+              {!canAccessLiveVideo && <ProBadge />}
             </button>
           </div>
 
           {/* Panel Content */}
           <div className="flex-1 overflow-hidden">
-            {sidePanel === 'news' ? <NewsFeed /> : <VideoFeed />}
+            {sidePanel === 'news' ? <NewsFeed /> : (canAccessLiveVideo ? <VideoFeed /> : <NewsFeed />)}
           </div>
         </div>
       </main>
@@ -195,7 +226,7 @@ export default function Dashboard() {
                   🌐 Globe
                 </button>
                 <button
-                  onClick={() => setMapView('space')}
+                  onClick={handleSpaceClick}
                   className={`px-4 py-2 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${
                     mapView === 'space'
                       ? 'bg-purple-600 text-white'
@@ -203,6 +234,7 @@ export default function Dashboard() {
                   }`}
                 >
                   🔭 Space
+                  {!canAccessDeepSpace && <ProBadge />}
                 </button>
               </div>
 
@@ -229,7 +261,7 @@ export default function Dashboard() {
                   📰 News
                 </button>
                 <button
-                  onClick={() => setSidePanel('video')}
+                  onClick={handleVideoClick}
                   className={`flex-1 px-4 py-2 text-sm font-medium rounded-full transition-colors ${
                     sidePanel === 'video'
                       ? 'bg-red-600 text-white'
@@ -237,12 +269,13 @@ export default function Dashboard() {
                   }`}
                 >
                   📺 Video
+                  {!canAccessLiveVideo && <ProBadge />}
                 </button>
               </div>
 
               {/* Feed content */}
               <div className="flex-1 overflow-hidden">
-                {sidePanel === 'news' ? <NewsFeed /> : <VideoFeed />}
+                {sidePanel === 'news' ? <NewsFeed /> : (canAccessLiveVideo ? <VideoFeed /> : <NewsFeed />)}
               </div>
             </div>
           )}
@@ -291,7 +324,7 @@ export default function Dashboard() {
             </div>
             <span className="text-border">|</span>
             <span>
-              {newsData?.articles?.length || 0} articles from {newsData?.sources?.length || 0} sources
+              {newsData?.articles?.length || 0} articles from 20+ sources
             </span>
           </div>
           <div className="flex items-center gap-4">
@@ -305,6 +338,14 @@ export default function Dashboard() {
           </div>
         </div>
       </footer>
+
+      {/* Zone Detail Panel */}
+      {selectedHotspot && (
+        <ZoneDetail
+          hotspot={selectedHotspot}
+          onClose={() => setSelectedHotspot(null)}
+        />
+      )}
     </div>
   );
 }

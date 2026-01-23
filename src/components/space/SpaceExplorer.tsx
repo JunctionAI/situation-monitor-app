@@ -101,13 +101,9 @@ export function SpaceExplorer({ onBackToEarth }: SpaceExplorerProps) {
       {/* Scrollable images */}
       <div
         ref={containerRef}
-        className="absolute inset-0 overflow-y-auto snap-y snap-mandatory"
+        className="absolute inset-0 overflow-y-auto snap-y snap-mandatory scrollbar-hide"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
       >
-        <style jsx>{`
-          div::-webkit-scrollbar { display: none; }
-        `}</style>
-
         {sortedImages.map((image, index) => (
           <div
             key={image.id}
@@ -290,6 +286,9 @@ export function SpaceExplorer({ onBackToEarth }: SpaceExplorerProps) {
         @keyframes twinkle {
           0%, 100% { opacity: 0.3; }
           50% { opacity: 1; }
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
         }
       `}</style>
     </div>
