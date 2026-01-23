@@ -8,17 +8,17 @@ interface SpaceExplorerProps {
 }
 
 export function SpaceExplorer({ onBackToEarth }: SpaceExplorerProps) {
-  const [activeImage, setActiveImage] = useState<JWSTImage | null>(null);
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const [selectedImage, setSelectedImage] = useState<JWSTImage | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const sortedImages = getImagesByDistance();
 
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    const progress = scrollTop / (scrollHeight - clientHeight);
-    setScrollProgress(progress);
-  }, []);
+    const { scrollTop, clientHeight } = containerRef.current;
+    const index = Math.floor(scrollTop / clientHeight);
+    setCurrentIndex(Math.min(index, sortedImages.length - 1));
+  }, [sortedImages.length]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -28,187 +28,133 @@ export function SpaceExplorer({ onBackToEarth }: SpaceExplorerProps) {
     }
   }, [handleScroll]);
 
+  const currentImage = sortedImages[currentIndex];
+
   return (
     <div className="relative w-full h-full bg-black overflow-hidden">
-      {/* Star field background */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `
-            radial-gradient(ellipse at center, #0a0a1a 0%, #000000 100%),
-            url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")
-          `,
-          opacity: 0.8,
-        }}
-      />
-
-      {/* Animated stars */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(200)].map((_, i) => (
+      {/* Stars background */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        {[...Array(150)].map((_, i) => (
           <div
             key={i}
-            className="absolute rounded-full bg-white animate-pulse"
+            className="absolute rounded-full bg-white"
             style={{
-              width: Math.random() * 3 + 1 + 'px',
-              height: Math.random() * 3 + 1 + 'px',
+              width: Math.random() * 2 + 1 + 'px',
+              height: Math.random() * 2 + 1 + 'px',
               left: Math.random() * 100 + '%',
               top: Math.random() * 100 + '%',
-              opacity: Math.random() * 0.8 + 0.2,
-              animationDelay: Math.random() * 3 + 's',
-              animationDuration: Math.random() * 2 + 2 + 's',
+              opacity: Math.random() * 0.7 + 0.3,
+              animation: `twinkle ${Math.random() * 3 + 2}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 2}s`,
             }}
           />
         ))}
       </div>
 
-      {/* Back to Earth button */}
+      {/* Back button */}
       <button
         onClick={onBackToEarth}
-        className="absolute top-4 left-4 z-50 flex items-center gap-2 px-4 py-2 bg-blue-600/80 hover:bg-blue-500 rounded-lg text-white font-medium transition-all backdrop-blur-sm border border-blue-400/30"
+        className="absolute top-4 left-4 z-50 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-all backdrop-blur-sm border border-white/20"
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
         </svg>
-        Back to Earth
       </button>
 
-      {/* Header */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 text-center">
-        <h1 className="text-2xl font-bold text-white tracking-wide">
-          James Webb Space Telescope
-        </h1>
-        <p className="text-cyan-400 text-sm mt-1">Explore the Universe</p>
+      {/* Distance indicator */}
+      <div className="absolute top-4 right-4 z-50 text-right">
+        <div className="text-xs text-white/50 uppercase tracking-widest">Distance from Earth</div>
+        <div className="text-2xl font-light text-cyan-400 font-mono">
+          {currentImage?.distance || '—'}
+        </div>
       </div>
 
-      {/* Journey progress indicator */}
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-2">
-        <div className="text-xs text-gray-400 writing-mode-vertical rotate-180" style={{ writingMode: 'vertical-rl' }}>
-          Journey Progress
-        </div>
-        <div className="h-48 w-1 bg-gray-800 rounded-full overflow-hidden">
+      {/* Progress dots */}
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2">
+        {sortedImages.map((_, i) => (
           <div
-            className="w-full bg-gradient-to-t from-cyan-500 to-purple-500 transition-all duration-300"
-            style={{ height: `${scrollProgress * 100}%` }}
+            key={i}
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+              i === currentIndex
+                ? 'bg-cyan-400 scale-125'
+                : i < currentIndex
+                ? 'bg-white/50'
+                : 'bg-white/20'
+            }`}
           />
-        </div>
-        <div className="text-xs text-cyan-400">
-          {Math.round(scrollProgress * 13.8)}B ly
-        </div>
+        ))}
       </div>
 
-      {/* Scrollable content */}
+      {/* Scrollable images */}
       <div
         ref={containerRef}
-        className="absolute inset-0 overflow-y-auto scroll-smooth"
+        className="absolute inset-0 overflow-y-auto snap-y snap-mandatory"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         <style jsx>{`
-          div::-webkit-scrollbar {
-            display: none;
-          }
+          div::-webkit-scrollbar { display: none; }
         `}</style>
 
-        {/* Initial space - Earth departure zone */}
-        <div className="h-[50vh] flex items-center justify-center">
-          <div className="text-center animate-bounce">
-            <p className="text-gray-400 text-lg">Scroll down to explore the cosmos</p>
-            <svg className="w-8 h-8 mx-auto mt-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-          </div>
-        </div>
-
-        {/* JWST Images - sorted by distance */}
         {sortedImages.map((image, index) => (
           <div
             key={image.id}
-            className="min-h-screen flex items-center justify-center p-8 relative"
+            className="h-full w-full snap-start relative flex items-center justify-center cursor-pointer group"
+            onClick={() => setSelectedImage(image)}
           >
-            {/* Distance marker */}
-            <div className="absolute left-8 top-1/2 -translate-y-1/2 text-left">
-              <div className="text-6xl font-bold text-white/10">{String(index + 1).padStart(2, '0')}</div>
-              <div className="text-cyan-400 text-sm font-mono mt-2">{image.distance}</div>
-              {image.constellation && (
-                <div className="text-gray-500 text-xs mt-1">{image.constellation}</div>
-              )}
+            {/* Full-screen image */}
+            <div
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+              style={{
+                backgroundImage: `url(${image.imageUrl})`,
+              }}
+            />
+
+            {/* Gradient overlays */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
+            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-500" />
+
+            {/* Minimal label */}
+            <div className="absolute bottom-8 left-8 right-24 z-10">
+              <div className="flex items-center gap-3 mb-2">
+                <span className={`px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wide ${
+                  image.type === 'nebula' ? 'bg-purple-500/80' :
+                  image.type === 'galaxy' ? 'bg-blue-500/80' :
+                  image.type === 'deep-field' ? 'bg-cyan-500/80' :
+                  image.type === 'star' ? 'bg-yellow-500/80 text-black' :
+                  image.type === 'cluster' ? 'bg-pink-500/80' :
+                  'bg-green-500/80'
+                }`}>
+                  {image.type}
+                </span>
+                {image.constellation && (
+                  <span className="text-white/50 text-sm">{image.constellation}</span>
+                )}
+              </div>
+              <h2 className="text-4xl font-light text-white mb-2 drop-shadow-lg">
+                {image.title}
+              </h2>
+              <p className="text-white/60 text-sm flex items-center gap-2">
+                <span className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse" />
+                Click to explore
+              </p>
             </div>
 
-            {/* Image card */}
-            <div
-              className="relative max-w-4xl w-full cursor-pointer group"
-              onClick={() => setActiveImage(image)}
-            >
-              {/* Glow effect */}
-              <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-pink-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-              <div className="relative bg-gray-900/80 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700/50 group-hover:border-cyan-500/50 transition-all duration-300">
-                {/* Image */}
-                <div className="aspect-video relative overflow-hidden">
-                  <img
-                    src={image.imageUrl}
-                    alt={image.title}
-                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
-                    loading="lazy"
-                  />
-                  {/* Overlay gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent" />
-
-                  {/* Type badge */}
-                  <div className="absolute top-4 right-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide ${
-                      image.type === 'nebula' ? 'bg-purple-500/80 text-white' :
-                      image.type === 'galaxy' ? 'bg-blue-500/80 text-white' :
-                      image.type === 'deep-field' ? 'bg-cyan-500/80 text-white' :
-                      image.type === 'star' ? 'bg-yellow-500/80 text-black' :
-                      image.type === 'cluster' ? 'bg-pink-500/80 text-white' :
-                      'bg-green-500/80 text-white'
-                    }`}>
-                      {image.type}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Info */}
-                <div className="p-6">
-                  <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors">
-                    {image.title}
-                  </h2>
-                  <p className="text-gray-400 text-sm leading-relaxed line-clamp-3">
-                    {image.description}
-                  </p>
-
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-700/50">
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <span>Released: {new Date(image.releaseDate).toLocaleDateString()}</span>
-                      {image.coordinates && (
-                        <span className="font-mono">RA: {image.coordinates.ra}</span>
-                      )}
-                    </div>
-                    <button className="text-cyan-400 text-sm hover:text-cyan-300 transition-colors flex items-center gap-1">
-                      View Full
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
+            {/* Index number */}
+            <div className="absolute top-8 left-8 text-white/10 text-8xl font-bold">
+              {String(index + 1).padStart(2, '0')}
             </div>
           </div>
         ))}
 
-        {/* End of journey */}
-        <div className="h-screen flex items-center justify-center">
-          <div className="text-center max-w-2xl px-8">
-            <div className="text-6xl mb-6">🌌</div>
-            <h2 className="text-3xl font-bold text-white mb-4">Edge of the Observable Universe</h2>
-            <p className="text-gray-400 mb-8">
-              You've traveled 13.8 billion light-years from Earth, viewing some of the oldest light
-              in the universe captured by the James Webb Space Telescope.
-            </p>
+        {/* End card */}
+        <div className="h-full w-full snap-start relative flex items-center justify-center bg-gradient-to-b from-black to-purple-950/30">
+          <div className="text-center">
+            <div className="text-6xl mb-6 opacity-50">✧</div>
+            <h2 className="text-3xl font-light text-white mb-3">Edge of Observable Universe</h2>
+            <p className="text-white/50 text-lg mb-8">13.8 billion light-years from home</p>
             <button
               onClick={onBackToEarth}
-              className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-medium rounded-lg hover:from-cyan-400 hover:to-blue-500 transition-all"
+              className="px-8 py-3 bg-white/10 hover:bg-white/20 border border-white/30 text-white rounded-full transition-all"
             >
               Return to Earth
             </button>
@@ -216,51 +162,120 @@ export function SpaceExplorer({ onBackToEarth }: SpaceExplorerProps) {
         </div>
       </div>
 
-      {/* Full image modal */}
-      {activeImage && (
+      {/* Detail panel */}
+      {selectedImage && (
         <div
-          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
-          onClick={() => setActiveImage(null)}
+          className="fixed inset-0 z-50 flex"
+          onClick={() => setSelectedImage(null)}
         >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
+
+          {/* Content */}
           <div
-            className="relative max-w-7xl w-full max-h-[90vh] overflow-auto"
+            className="relative flex w-full h-full"
             onClick={e => e.stopPropagation()}
           >
-            <button
-              onClick={() => setActiveImage(null)}
-              className="absolute top-4 right-4 z-10 p-2 bg-gray-800/80 hover:bg-gray-700 rounded-full text-white transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            {/* Image side */}
+            <div className="flex-1 relative">
+              <img
+                src={selectedImage.imageUrl}
+                alt={selectedImage.title}
+                className="w-full h-full object-contain"
+              />
+            </div>
 
-            <img
-              src={activeImage.imageUrl}
-              alt={activeImage.title}
-              className="w-full h-auto rounded-lg"
-            />
+            {/* Info panel */}
+            <div className="w-96 bg-gray-900/95 border-l border-white/10 overflow-y-auto">
+              {/* Close button */}
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors"
+              >
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
 
-            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/80 to-transparent">
-              <h2 className="text-3xl font-bold text-white mb-2">{activeImage.title}</h2>
-              <p className="text-gray-300 mb-4">{activeImage.description}</p>
-              <div className="flex flex-wrap gap-4 text-sm text-gray-400">
-                <span><strong className="text-cyan-400">Distance:</strong> {activeImage.distance}</span>
-                {activeImage.constellation && (
-                  <span><strong className="text-cyan-400">Constellation:</strong> {activeImage.constellation}</span>
-                )}
-                <span><strong className="text-cyan-400">Released:</strong> {new Date(activeImage.releaseDate).toLocaleDateString()}</span>
-                {activeImage.coordinates && (
-                  <>
-                    <span><strong className="text-cyan-400">RA:</strong> {activeImage.coordinates.ra}</span>
-                    <span><strong className="text-cyan-400">Dec:</strong> {activeImage.coordinates.dec}</span>
-                  </>
-                )}
+              <div className="p-6 pt-16">
+                {/* Type badge */}
+                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide mb-4 ${
+                  selectedImage.type === 'nebula' ? 'bg-purple-500/80' :
+                  selectedImage.type === 'galaxy' ? 'bg-blue-500/80' :
+                  selectedImage.type === 'deep-field' ? 'bg-cyan-500/80' :
+                  selectedImage.type === 'star' ? 'bg-yellow-500/80 text-black' :
+                  selectedImage.type === 'cluster' ? 'bg-pink-500/80' :
+                  'bg-green-500/80'
+                }`}>
+                  {selectedImage.type}
+                </span>
+
+                {/* Title */}
+                <h2 className="text-3xl font-light text-white mb-4">
+                  {selectedImage.title}
+                </h2>
+
+                {/* Description */}
+                <p className="text-gray-300 leading-relaxed mb-8">
+                  {selectedImage.description}
+                </p>
+
+                {/* Stats */}
+                <div className="space-y-4">
+                  <div className="border-t border-white/10 pt-4">
+                    <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Distance</div>
+                    <div className="text-xl text-cyan-400 font-mono">{selectedImage.distance}</div>
+                  </div>
+
+                  {selectedImage.constellation && (
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Constellation</div>
+                      <div className="text-lg text-white">{selectedImage.constellation}</div>
+                    </div>
+                  )}
+
+                  {selectedImage.coordinates && (
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Coordinates</div>
+                      <div className="text-sm text-gray-300 font-mono">
+                        <div>RA: {selectedImage.coordinates.ra}</div>
+                        <div>Dec: {selectedImage.coordinates.dec}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Released</div>
+                    <div className="text-sm text-gray-300">
+                      {new Date(selectedImage.releaseDate).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* JWST credit */}
+                <div className="mt-8 pt-4 border-t border-white/10">
+                  <div className="flex items-center gap-3 text-gray-500 text-xs">
+                    <span className="text-2xl">🔭</span>
+                    <span>James Webb Space Telescope<br/>NASA / ESA / CSA</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* CSS for animations */}
+      <style jsx global>{`
+        @keyframes twinkle {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
